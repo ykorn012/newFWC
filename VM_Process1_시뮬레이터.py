@@ -99,35 +99,7 @@ class VM_Process1_시뮬레이터:
     def getPlsWindow(self):
         return self.PlsWindow
 
-    def mean_absolute_percentage_error(self, y_act, y_prd):
-        #print('y_act : ', y_act, 'y_prd : ', y_prd)
-        mape = np.mean(np.abs((y_act - y_prd) / y_act)) * 100
-        #print('mape : ', mape)
-        return mape
-
-    def plt_show1(self, n, y_act, y_prd):
-        plt.plot(np.arange(n), y_act, 'rx--', y_prd, 'bx--', lw=2, ms=5, mew=2)
-        plt.xticks(np.arange(0, n + 1, 50))
-        plt.xlabel('Run No.')
-        plt.ylabel('Actual and Predicted Response (y1)')
-
-    def plt_show2(self, n, y1, y2):
-        plt.figure()
-        plt.plot(np.arange(n), y1, 'bx-', y2, 'gx--', lw=2, ms=5, mew=2)
-        plt.xticks(np.arange(0, n + 1, 5))
-        plt.yticks(np.arange(-1.2, 1.3, 0.2))
-        plt.xlabel('Metrology Run No.(z)')
-        plt.ylabel('e(z)')
-
-    def plt_show3(self, n, y1):
-        plt.figure()
-        plt.plot(np.arange(n), y1, 'bx-', lw=2, ms=5, mew=2)
-        plt.xticks(np.arange(0, n + 1, 5))
-        plt.yticks(np.arange(-1.2, 1.3, 0.2))
-        plt.xlabel('Metrology Run No.(z)')
-        plt.ylabel('e(z)')
-
-    def DoE_Run(self, Z, M):  ##12, 10
+    def DoE_Run(self, lamda_PLS, Z, M):  ##12, 10
         N = Z * M
         DoE_Queue = []
 
@@ -139,6 +111,10 @@ class VM_Process1_시뮬레이터:
         npPlsWindow = np.array(initplsWindow)
 
         plsWindow = []
+
+        for z in np.arange(0, Z):
+            npPlsWindow[z * M:(z + 1) * M - 1, 0:idx_start] = lamda_PLS * npPlsWindow[z * M:(z + 1) * M - 1, 0:idx_start]
+            npPlsWindow[z * M:(z + 1) * M - 1, idx_start:idx_end] = lamda_PLS * (npPlsWindow[z * M:(z + 1) * M - 1, idx_start:idx_end])
 
         for i in range(len(npPlsWindow)):
             plsWindow.append(npPlsWindow[i])
@@ -164,7 +140,7 @@ class VM_Process1_시뮬레이터:
         self.setPlsWindow(plsWindow)
         # self.plt_show1(N, y_act[:,0:1], y_prd[:,0:1])
 
-    def VM_Run(self, lamda_PLS, Z, M, showType="type-1"):
+    def VM_Run(self, lamda_PLS, Z, M):
         N = Z * M
 
         ## V0, Y0 Mean Center
@@ -181,6 +157,7 @@ class VM_Process1_시뮬레이터:
         y_act = []
         y_prd = []
         VM_Output = []
+        ACT_Output = []
 
         plsWindow = self.getPlsWindow()
 
@@ -209,25 +186,28 @@ class VM_Process1_시뮬레이터:
 
             ez = M_Queue[M - 1][idx_start:idx_end] - M_Queue[M - 1][idx_end:idx_end + 2]
             ez_Queue.append(ez)
-            mape = self.mean_absolute_percentage_error(M_Queue[M - 1][idx_start:idx_start+1],
-                                                     M_Queue[M - 1][idx_end:idx_end + 1])
-            mape_metrology = np.array([M_Queue[M - 1][idx_start:idx_start+1], M_Queue[M - 1][idx_end:idx_end + 1], mape])
-            mape_Queue.append(mape_metrology)
 
             if z == 0:
                 ez = np.array([0, 0])
-            npM_Queue = np.array(M_Queue)
+            npVM_Queue = np.array(M_Queue)
+            npACT_Queue = np.array(M_Queue)
 
-            npM_Queue[0:M - 1, 0:idx_start] = lamda_PLS * npM_Queue[0:M - 1, 0:idx_start]
-            npM_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * (npM_Queue[0:M - 1, idx_end:idx_end + 2] + 0.5 * ez)
-            npM_Queue = npM_Queue[:, 0:idx_end]
+            npVM_Queue[0:M - 1, 0:idx_start] = lamda_PLS * npVM_Queue[0:M - 1, 0:idx_start]
+            npVM_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * (npVM_Queue[0:M - 1, idx_end:idx_end + 2] + 0.5 * ez)
+            npVM_Queue = npVM_Queue[:, 0:idx_end]  ##idx_start ~ end 까지 VM 값 정리
+
+            npACT_Queue[0:M - 1, 0:idx_start] = lamda_PLS * npACT_Queue[0:M - 1, 0:idx_start]
+            npACT_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * npACT_Queue[0:M - 1, idx_start:idx_end]
+            npACT_Queue = npACT_Queue[:, 0:idx_end]  ##idx_start ~ end 까지 VM 값 정리
 
             for i in range(M):  #VM_Output 구한다. lamda_pls 가중치를 반영하여 다음 계산시 편리하게 한다.
-                temp = npM_Queue[i:i+1, idx_start:idx_start + 2]
+                temp = npVM_Queue[i:i + 1, idx_start:idx_end]
                 VM_Output.append(np.array([temp[0, 0], temp[0, 1]]))
+                temp = npACT_Queue[i:i + 1, idx_start:idx_end]
+                ACT_Output.append(np.array([temp[0, 0], temp[0, 1]]))
 
             for i in range(M):
-                plsWindow.append(npM_Queue[i])
+                plsWindow.append(npVM_Queue[i])
 
             M_Mean = np.mean(plsWindow, axis=0)
             meanVz = M_Mean[0:idx_start]
@@ -246,18 +226,21 @@ class VM_Process1_시뮬레이터:
 
         self.metric = metrics.explained_variance_score(y_act[:,0:1], y_prd[:,0:1])
         print("VM Mean squared error: %.3f" % metrics.mean_squared_error(y_act[:,0:1], y_prd[:,0:1]))
-        print("explained_variance_score(: %.3f" % self.metric)
+        print("explained_variance_score: %.3f" % self.metric)
         print("VM r2 score: %.3f" % metrics.r2_score(y_act[:,0:1], y_prd[:,0:1]))
         ez_run = np.array(ez_Queue)
 
-        if showType == "type-1":
-            self.plt_show1(N, y_act[:, 0:1], y_prd[:, 0:1])
-            self.plt_show2(Z + 1, ez_run[:, 0:1], ez_run[:, 1:2])
-        elif showType == "type-2":
-            self.plt_show3(Z + 1, ez_run[:, 0:1])
-        elif showType == "type-3":
-            self.plt_show2(Z + 1, ez_run[:, 0:1], ez_run[:, 1:2])
-        else:
-            print("No showType")
+        # if showType == "type-1":
+        #     self.plt_show1(N, y_act[:, 0:1], y_prd[:, 0:1])
+        #     self.plt_show2(Z + 1, ez_run[:, 0:1], ez_run[:, 1:2])
+        # elif showType == "type-2":
+        #     self.plt_show3(Z + 1, ez_run[:, 0:1])
+        # elif showType == "type-3":
+        #     self.plt_show2(Z + 1, ez_run[:, 0:1], ez_run[:, 1:2])
+        # else:
+        #     print("No showType")
+
         VM_Output = np.array(VM_Output)
-        return VM_Output, mape_Queue, ez_Queue
+        ACT_Output = np.array(ACT_Output)
+
+        return VM_Output, ACT_Output, ez_run, y_act, y_prd
