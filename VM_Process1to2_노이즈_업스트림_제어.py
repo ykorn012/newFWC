@@ -18,7 +18,7 @@ import os
 # from pandas import DataFrame, Series
 # import pandas as pd
 
-os.chdir("D:/10. 대학원/04. Source\OnlyVM/01. Local VM/")
+os.chdir("D:/10. 대학원/04. Source\OnlyVM/03. Local VM/")
 
 A_p1 = np.array([[0.5, -0.2], [0.25, 0.15]])    #recipe gain matrix
 d_p1 = np.array([[0.1, 0], [0.05, 0]])  #drift matrix
@@ -28,8 +28,8 @@ C_p1 = np.transpose(np.array([[0, 0.5, 0.05, 0, 0.15, 0], [0.085, 0, 0.025, 0.2,
 A_p2 = np.array([[1, 0.1], [-0.5, 0.2]])
 d_p2 = np.array([[0, 0.05], [0, 0.05]])
 C_p2 = np.transpose(np.array([[0.1, 0, 0, -0.2, 0.1], [0, -0.2, 0, 0.3, 0]]))
-F_p2 = np.array([[2.5, 0], [0, 2.5]])
-SEED = 999999000  # 999999000
+F_p2 = np.array([[2, 0], [0, 2]])
+SEED = 100   # 999999000   100 111999999
 # Process 변수와 출력 관련 system gain matrix
 
 def main():
@@ -45,7 +45,8 @@ def main():
     # fdh_graph.plt_show1(400, y_act[:, 0:1], y_prd[:, 0:1])
     # fdh_graph.plt_show2(40 + 1, ez_run[:, 0:1], ez_run[:, 1:2])
 
-    np.savetxt("output/Error_VMresult.csv", Error_VMresult, delimiter=",", fmt="%.4f")
+    np.savetxt("output/Error_VMresult2.csv", Error_VMresult, delimiter=",", fmt="%.4f")
+    np.savetxt("output/Error_ACTResult2.csv", Error_ACTResult, delimiter=",", fmt="%.4f")
 
     M = 10
     # for z in np.arange(21, 32, 1):
@@ -59,10 +60,21 @@ def main():
 
     np.savetxt("output/Error_MAPE.csv", p1_mape_Queue, delimiter=",", fmt="%.4f")
 
-    for z in np.arange(0, 40, 1):
-        if p1_mape_Queue[z] >= 50:
+    for z in np.arange(15, 40, 1):
+        if p1_mape_Queue[z] >= 10:
+            x1 = Error_VMresult[(z * M) - 1]
+            x2 = Error_VMresult[((z + 1) * M) - 1]
+            s = (x2 - x1) / M
             for k in np.arange(z * M, (z + 1) * M - 1):
-                Error_VMresult[k] = Error_VMresult[((z + 1) * M) - 1]
+                i = k % (z * M) + 1
+                Error_VMresult[k] = x1 + s * i
+                print('test : ', x1, x2, Error_VMresult[k])
+                #Error_VMresult[k] = Error_VMresult[((z + 1) * M) - 1]
+
+    # for z in np.arange(15, 40, 1):
+    #     if p1_mape_Queue[z] >= 10:
+    #         for k in np.arange(z * M, (z + 1) * M - 1):
+    #             Error_VMresult[k] = Error_VMresult[((z + 1) * M) - 1]
 
     np.savetxt("output/Error_VMresult_OK.csv", Error_VMresult, delimiter=",", fmt="%.4f")
 
@@ -72,10 +84,14 @@ def main():
 
     p2_mape_Queue = []
     M = 10
-    for i in np.arange(22 * M, 34 * M, 1):
-        mape = fdh_graph.mean_absolute_percentage_error(i + 1, p2_y_act[i][1], p2_y_prd[i][1])
+    for z in np.arange(15, 40, 1):
+        mape = fdh_graph.mean_absolute_percentage_error(z + 1, p2_y_act[((z + 1) * M) - 1][1], p2_y_prd[((z + 1) * M) - 1][1])
         p2_mape_Queue.append(mape)
-    print('P2 MAPE (%) : ', np.mean(p2_mape_Queue))
+    print('P2-MAPE (%) : ', np.mean(p2_mape_Queue))
+    # for i in np.arange(16 * M, 40 * M, 1):
+    #     mape = fdh_graph.mean_absolute_percentage_error(i + 1, p2_y_act[i][1], p2_y_prd[i][1])
+    #     p2_mape_Queue.append(mape)
+    # print('P2 MAPE (%) : ', np.mean(p2_mape_Queue))
 
     fdh_graph.plt_show1(400, p2_y_act[:, 1:2], p2_y_prd[:, 1:2])
     #fdh_graph.plt_show2(40 + 1, p2_ez_run[:, 0:1], p2_ez_run[:, 1:2])
