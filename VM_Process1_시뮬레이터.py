@@ -133,8 +133,8 @@ class VM_Process1_시뮬레이터:
         y_prd = pls.predict(V0) + DoE_Mean[idx_start:idx_end]
         y_act = npDoE_Queue[:, idx_start:idx_end]
 
-        print("Init DoE VM Mean squared error: %.3f" % metrics.mean_squared_error(y_act[:,0:1], y_prd[:,0:1]))
-        print("Init DoE VM r2 score: %.3f" % metrics.r2_score(y_act[:,0:1], y_prd[:,0:1]))
+        print("Init DoE VM Mean squared error: %.4f" % metrics.mean_squared_error(y_act[:,0:1], y_prd[:,0:1]))
+        print("Init DoE VM r2 score: %.4f" % metrics.r2_score(y_act[:,0:1], y_prd[:,0:1]))
 
         self.setDoE_Mean(DoE_Mean)
         self.setPlsWindow(plsWindow)
@@ -160,8 +160,6 @@ class VM_Process1_시뮬레이터:
         ACT_Output = []
 
         plsWindow = self.getPlsWindow()
-
-        #self.d = np.array([[0.1, 0], [0.05, 0]])
 
         for z in np.arange(0, Z):
             for k in np.arange(z * M + 1, ((z + 1) * M) + 1):
@@ -193,7 +191,7 @@ class VM_Process1_시뮬레이터:
             npACT_Queue = np.array(M_Queue)
 
             npVM_Queue[0:M - 1, 0:idx_start] = lamda_PLS * npVM_Queue[0:M - 1, 0:idx_start]
-            npVM_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * (npVM_Queue[0:M - 1, idx_end:idx_end + 2] + 0.5 * ez)
+            npVM_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * (npVM_Queue[0:M - 1, idx_end:idx_end + 2] + 0.5 * ez) # + 0.5 * ez
             npVM_Queue = npVM_Queue[:, 0:idx_end]  ##idx_start ~ end 까지 VM 값 정리
 
             npACT_Queue[0:M - 1, 0:idx_start] = lamda_PLS * npACT_Queue[0:M - 1, 0:idx_start]
@@ -201,7 +199,10 @@ class VM_Process1_시뮬레이터:
             npACT_Queue = npACT_Queue[:, 0:idx_end]  ##idx_start ~ end 까지 VM 값 정리
 
             for i in range(M):  #VM_Output 구한다. lamda_pls 가중치를 반영하여 다음 계산시 편리하게 한다.
-                temp = npVM_Queue[i:i + 1, idx_start:idx_end]
+                if i == M - 1:
+                    temp = npACT_Queue[i:i + 1, idx_start:idx_end]
+                else:
+                    temp = npVM_Queue[i:i + 1, idx_start:idx_end]
                 VM_Output.append(np.array([temp[0, 0], temp[0, 1]]))
                 temp = npACT_Queue[i:i + 1, idx_start:idx_end]
                 ACT_Output.append(np.array([temp[0, 0], temp[0, 1]]))
@@ -229,16 +230,6 @@ class VM_Process1_시뮬레이터:
         print("explained_variance_score: %.3f" % self.metric)
         print("VM r2 score: %.3f" % metrics.r2_score(y_act[:,0:1], y_prd[:,0:1]))
         ez_run = np.array(ez_Queue)
-
-        # if showType == "type-1":
-        #     self.plt_show1(N, y_act[:, 0:1], y_prd[:, 0:1])
-        #     self.plt_show2(Z + 1, ez_run[:, 0:1], ez_run[:, 1:2])
-        # elif showType == "type-2":
-        #     self.plt_show3(Z + 1, ez_run[:, 0:1])
-        # elif showType == "type-3":
-        #     self.plt_show2(Z + 1, ez_run[:, 0:1], ez_run[:, 1:2])
-        # else:
-        #     print("No showType")
 
         VM_Output = np.array(VM_Output)
         ACT_Output = np.array(ACT_Output)
