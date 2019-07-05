@@ -76,8 +76,50 @@ class VM_Process1_노이즈시뮬레이터:
             k2 = k % 200  # n = 200 일 때 #1 entity maintenance event
         eta_k = np.array([[k1], [k2]])
 
+        A = self.A
+        C = self.C
+        d = self.d
+
+        if isInit == False:
+            if k >= 151:
+                # u1 = np.random.normal(1.6, np.sqrt(0.2))
+                # u2 = np.random.normal(1.4, np.sqrt(0.2))
+                # u = np.array([u1, u2])
+
+                v1 = np.random.normal(0.3, np.sqrt(0.1))
+                v2 = 1 * v1
+                v3 = np.random.uniform(0.1, 0.6)
+                v4 = 1.5 * v3
+                v5 = np.random.uniform(0, 0.2)
+                v6 = np.random.normal(-0.3, np.sqrt(0.2))
+
+                r = 30
+                v1 = r * v1
+                v2 = r * v2
+                v3 = r * v3
+                v4 = r * v4
+                v5 = r * v5
+                v6 = r * v6
+
+                v = np.array([v1, v2, v3, v4, v5, v6])
+                k1 = 1 * k1
+                k2 = 1 * k2
+                eta_k = np.array([[k1], [k2]])
+                A = 0.5 * A
+                #A_chg = self.A
+                # C_p1 = np.transpose(np.array([[0, 0.5, 0.05, 0, 0.15, 0], [0.085, 0, 0.025, 0.2, 0, 0]]))
+                #C = np.transpose(np.array([[0.7, 0.8, 0.5, 0.2, 0.3, 0.2], [0.2, 0.5, 0.8, 0.4, 0.2, 0.2]]))
+                C = 0.2 * C
+                #C_chg = np.transpose(np.array([[0, 0.25, 0.01, 0, 0.05, 0], [0.04, 0, 0.01, 0.1, 0, 0]]))
+                #C_chg = np.transpose(np.array([[0.7, 0.8, 0.5, 0.2, 0.3, 0.2], [0.085, 0, 0.025, 0.2, 0, 0]]))
+                #d = np.array([[0.14, 0], [0.07, 0]])
+                #d_chg = self.d
+                # e1 = np.random.normal(3, np.sqrt(0.1))
+                # e2 = np.random.normal(3, np.sqrt(0.2))
+                # e = np.array([e1, e2])
+
+        y = u.dot(A) + v.dot(C) + np.sum(eta_k * d, axis=0) + e
         psi = np.array([u1, u2, v1, v2, v3, v4, v5, v6, k1, k2])
-        y = u.dot(self.A) + v.dot(self.C) + np.sum(eta_k * self.d, axis=0) + e
         rows = np.r_[psi, y]
         idx_end = len(rows)
         idx_start = idx_end - 2
@@ -133,8 +175,8 @@ class VM_Process1_노이즈시뮬레이터:
         y_prd = pls.predict(V0) + DoE_Mean[idx_start:idx_end]
         y_act = npDoE_Queue[:, idx_start:idx_end]
 
-        print("Init DoE VM Mean squared error: %.3f" % metrics.mean_squared_error(y_act[:,0:1], y_prd[:,0:1]))
-        print("Init DoE VM r2 score: %.3f" % metrics.r2_score(y_act[:,0:1], y_prd[:,0:1]))
+        print("Init DoE VM Mean squared error: %.4f" % metrics.mean_squared_error(y_act[:,0:1], y_prd[:,0:1]))
+        print("Init DoE VM r2 score: %.4f" % metrics.r2_score(y_act[:,0:1], y_prd[:,0:1]))
 
         self.setDoE_Mean(DoE_Mean)
         self.setPlsWindow(plsWindow)
@@ -161,29 +203,15 @@ class VM_Process1_노이즈시뮬레이터:
 
         plsWindow = self.getPlsWindow()
 
-        #self.d = np.array([[0.1, 0], [0.05, 0]])
-
         for z in np.arange(0, Z):
-            noise_temp = np.random.randint(0, 10, size=10) / 5
-            t = 0
             for k in np.arange(z * M + 1, ((z + 1) * M) + 1):
                 up = self.sampling_up()
                 vp = self.sampling_vp()
                 ep = self.sampling_ep()
 
-                #if z >= 21 and z < 31:
-                    # up = up * 3
-                    # vp = vp * 3
-                    # ep = ep * 3
                 idx_start, idx_end, result = self.sampling(k, up, vp, ep, False)
                 psiK = result[0:idx_start]
                 psiKStar = psiK - meanVz
-
-                if z >= 21 and z < 33:
-                    #print('meanYz: ', meanYz)
-                    meanYz = meanYz + noise_temp[t]
-                    #result[idx_start:idx_end] = result[idx_start:idx_end]
-                    t = t + 1
 
                 y_predK = self.pls.predict(psiKStar.reshape(1, idx_start)) + meanYz
                 rows = np.r_[result, y_predK.reshape(2, )]
@@ -210,7 +238,7 @@ class VM_Process1_노이즈시뮬레이터:
             npACT_Queue = np.array(M_Queue)
 
             npVM_Queue[0:M - 1, 0:idx_start] = lamda_PLS * npVM_Queue[0:M - 1, 0:idx_start]
-            npVM_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * (npVM_Queue[0:M - 1, idx_end:idx_end + 2] + 0.5 * ez)
+            npVM_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * (npVM_Queue[0:M - 1, idx_end:idx_end + 2] + 0.5 * ez) #+ 0.5 * ez
             npVM_Queue = npVM_Queue[:, 0:idx_end]  ##idx_start ~ end 까지 VM 값 정리
 
             npACT_Queue[0:M - 1, 0:idx_start] = lamda_PLS * npACT_Queue[0:M - 1, 0:idx_start]
@@ -218,7 +246,10 @@ class VM_Process1_노이즈시뮬레이터:
             npACT_Queue = npACT_Queue[:, 0:idx_end]  ##idx_start ~ end 까지 VM 값 정리
 
             for i in range(M):  #VM_Output 구한다. lamda_pls 가중치를 반영하여 다음 계산시 편리하게 한다.
-                temp = npVM_Queue[i:i + 1, idx_start:idx_end]
+                if i == M - 1:
+                    temp = npACT_Queue[i:i + 1, idx_start:idx_end]
+                else:
+                    temp = npVM_Queue[i:i + 1, idx_start:idx_end]
                 VM_Output.append(np.array([temp[0, 0], temp[0, 1]]))
                 temp = npACT_Queue[i:i + 1, idx_start:idx_end]
                 ACT_Output.append(np.array([temp[0, 0], temp[0, 1]]))
@@ -242,9 +273,9 @@ class VM_Process1_노이즈시뮬레이터:
         y_prd = np.array(y_prd)
 
         self.metric = metrics.explained_variance_score(y_act[:,0:1], y_prd[:,0:1])
-        print("VM Mean squared error: %.3f" % metrics.mean_squared_error(y_act[:,0:1], y_prd[:,0:1]))
-        print("explained_variance_score: %.3f" % self.metric)
-        print("VM r2 score: %.3f" % metrics.r2_score(y_act[:,0:1], y_prd[:,0:1]))
+        print("VM Mean squared error: %.4f" % metrics.mean_squared_error(y_act[:,0:1], y_prd[:,0:1]))
+        print("explained_variance_score: %.4f" % self.metric)
+        print("VM r2 score: %.4f" % metrics.r2_score(y_act[:,0:1], y_prd[:,0:1]))
         ez_run = np.array(ez_Queue)
 
         VM_Output = np.array(VM_Output)
