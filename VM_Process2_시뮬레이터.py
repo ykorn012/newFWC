@@ -26,7 +26,7 @@ class VM_Process2_시뮬레이터:
         self.F = F
         self.p_VM = p_VM
         self.p_ACT = p_ACT
-        self.real_ACT = []
+        self.real_ACT = []  # Process-1을 반영하는 실제 Actual 값
 
     def sampling_up(self):
         # u1 = np.random.normal(0.4, np.sqrt(0.2))
@@ -66,27 +66,29 @@ class VM_Process2_시뮬레이터:
         v = vp
         e = ep
 
-        if isInit == True:
-            k1 = k % 150
-            k2 = k
-            e = np.array([0, 0])   #DoE는 Sampling Actual이기 때문에 e가 없다.
-            fp = p_ACT
-        else:
-            k1 = k % 150  # n = 100 일 때 #1 entity maintenance event
-            k2 = k  # n = 200 일 때 #1 entity maintenance event
-            fp = p_VM
+        k1 = k % 150
+        k2 = k
         eta_k = np.array([[k1], [k2]])
+
+        if isInit == True:
+            e = np.array([0, 0])   #DoE는 Sampling Actual이기 때문에 e가 없다.
+            fp = p_ACT  # DoE에서는 Process-1 Act 값 사용
+        else:
+            fp = p_VM   # VM에서는 Process-1 VM 값 사용
 
         psi = np.array([u1, u2, v1, v2, v3, v4, v5, k1, k2])
 
-        if fp is not None:
+        if fp is not None:   # Process-1의 입력값이 있다면
+            # 이건 왜 해놓은지 모르겠다.. R2R에서 결과를 도출하기 위해서인지, y를 Paremeter로 학습목적인지.. 추후 검증필요
             psi = np.r_[psi, fp]
             f = fp
+            # VM이든 DoE든 계산한다.
             y = u.dot(self.A) + v.dot(self.C) + np.sum(eta_k * self.d, axis=0) + f.dot(self.F) + e
-            if isInit == False:
+            if isInit == False: #VM이 아닌 실제 ACT값을 별도로 계산한다.
+                #print('f.dot(self.F) : ', f.dot(self.F), 'p_ACT.dot(self.F) : ', p_ACT.dot(self.F))
                 temp = u.dot(self.A) + v.dot(self.C) + np.sum(eta_k * self.d, axis=0) + p_ACT.dot(self.F) + e
                 self.real_ACT.append(np.array([temp[0], temp[1]]))
-        else:
+        else: # Process-1의 입력값이 없고, 향후 Process-2 VM만 하고 싶을 때
             y = u.dot(self.A) + v.dot(self.C) + np.sum(eta_k * self.d, axis=0) + e
 
         rows = np.r_[psi, y]
@@ -111,7 +113,7 @@ class VM_Process2_시뮬레이터:
     def getPlsWindow(self):
         return self.PlsWindow
 
-    def DoE_Run(self, lamda_PLS, Z, M, f):  ##12, 10
+    def DoE_Run(self, lamda_PLS, Z, M, f):
         N = Z * M
         DoE_Queue = []
 
@@ -144,13 +146,12 @@ class VM_Process2_시뮬레이터:
 
         pls = self.pls_update(V0, Y0)
 
-        #print('Init VM Coefficients: \n', pls.coef_)
-
         y_prd = pls.predict(V0) + DoE_Mean[idx_start:idx_end]
         y_act = npDoE_Queue[:, idx_start:idx_end]
 
-        print("Init DoE VM Mean squared error: %.3f" % metrics.mean_squared_error(y_act[:,0:1], y_prd[:,0:1]))
-        print("Init DoE VM r2 score: %.3f" % metrics.r2_score(y_act[:,0:1], y_prd[:,0:1]))
+        print("Init DoE VM Mean squared error: %.4f" % metrics.mean_squared_error(y_act[:,1:2], y_prd[:,1:2]))
+        print("Init DoE VM r2 score: %.4f" % metrics.r2_score(y_act[:,1:2], y_prd[:,1:2]))
+        print("pls : ", pls.coef_)
 
         self.setDoE_Mean(DoE_Mean)
         self.setPlsWindow(plsWindow)
@@ -177,16 +178,12 @@ class VM_Process2_시뮬레이터:
 
         plsWindow = self.getPlsWindow()
 
-        #self.d = np.array([[0.1, 0], [0.05, 0]])
-
         for z in np.arange(0, Z):
             for k in np.arange(z * M + 1, ((z + 1) * M) + 1):
                 if  self.p_VM[k-1] is not None:
                     idx_start, idx_end, result = self.sampling(k, self.sampling_up(), self.sampling_vp(), self.sampling_ep(), self.p_VM[k-1], self.p_ACT[k-1], False)
                 else:
-                    idx_start, idx_end, result = self.sampling(k, self.sampling_up(), self.sampling_vp(),
-                                                               self.sampling_ep(), None, None,
-                                                               False)
+                    idx_start, idx_end, result = self.sampling(k, self.sampling_up(), self.sampling_vp(), self.sampling_ep(), None, None, False)
                 psiK = result[0:idx_start]
                 psiKStar = psiK - meanVz
                 y_predK = self.pls.predict(psiKStar.reshape(1, idx_start)) + meanYz
@@ -214,7 +211,7 @@ class VM_Process2_시뮬레이터:
             #     VM_Output.append(np.array([temp[0, 0], temp[0, 1]]))
 
             npVM_Queue[0:M - 1, 0:idx_start] = lamda_PLS * npVM_Queue[0:M - 1, 0:idx_start]
-            npVM_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * (npVM_Queue[0:M - 1, idx_end:idx_end + 2] + 0.5 * ez)
+            npVM_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * (npVM_Queue[0:M - 1, idx_end:idx_end + 2] + 0.5 * ez) # + 0.5 * ez
             npVM_Queue = npVM_Queue[:, 0:idx_end]
 
             npACT_Queue[0:M - 1, 0:idx_start] = lamda_PLS * npACT_Queue[0:M - 1, 0:idx_start]
@@ -222,7 +219,10 @@ class VM_Process2_시뮬레이터:
             npACT_Queue = npACT_Queue[:, 0:idx_end]  ##idx_start ~ end 까지 VM 값 정리
 
             for i in range(M):  #VM_Output 구한다. lamda_pls 가중치를 반영하여 다음 계산시 편리하게 한다.
-                temp = npVM_Queue[i:i + 1, idx_start:idx_end]
+                if i == M - 1:
+                    temp = npACT_Queue[i:i + 1, idx_start:idx_end]
+                else:
+                    temp = npVM_Queue[i:i + 1, idx_start:idx_end]
                 VM_Output.append(np.array([temp[0, 0], temp[0, 1]]))
                 temp = npACT_Queue[i:i + 1, idx_start:idx_end]
                 ACT_Output.append(np.array([temp[0, 0], temp[0, 1]]))
@@ -247,10 +247,11 @@ class VM_Process2_시뮬레이터:
         y_act = np.array(self.real_ACT)
         y_prd = np.array(y_prd)
 
-        self.metric = metrics.explained_variance_score(y_act[:,0:1], y_prd[:,0:1])
-        print("VM Mean squared error: %.3f" % metrics.mean_squared_error(y_act[:,0:1], y_prd[:,0:1]))
-        print("explained_variance_score: %.3f" % self.metric)
-        print("VM r2 score: %.3f" % metrics.r2_score(y_act[:,0:1], y_prd[:,0:1]))
+        self.metric = metrics.explained_variance_score(y_act[:,1:2], y_prd[:,1:2])
+        print("VM Mean squared error: %.4f" % metrics.mean_squared_error(y_act[:,1:2], y_prd[:,1:2]))
+        print("explained_variance_score: %.4f" % self.metric)
+        print("VM r2 score: %.4f" % metrics.r2_score(y_act[:,1:2], y_prd[:,1:2]))
+        #print("pls : ", self.pls.coef_)
         ez_run = np.array(ez_Queue)
 
         VM_Output = np.array(VM_Output)
