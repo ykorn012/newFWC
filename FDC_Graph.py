@@ -39,6 +39,3 @@ class FDC_Graph:
         mape = np.mean(np.abs((y_act - y_prd) / y_act)) * 100
         #print('mape : ', mape)
         return mape
-
-
-
