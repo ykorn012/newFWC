@@ -87,13 +87,13 @@ class VM_Process1_노이즈시뮬레이터:
                 # u = np.array([u1, u2])
 
                 v1 = np.random.normal(0.3, np.sqrt(0.1))
-                v2 = 1 * v1
-                v3 = np.random.uniform(0.1, 0.6)
-                v4 = 1.5 * v3
-                v5 = np.random.uniform(0, 0.2)
-                v6 = np.random.normal(-0.3, np.sqrt(0.2))
+                v2 = 2 * v1
+                v3 = np.random.uniform(0.6, 0.9)
+                v4 = 3 * v3
+                v5 = np.random.uniform(0, 0.4)
+                v6 = np.random.normal(-0.6, np.sqrt(0.2))
 
-                r = 30
+                r = 10
                 v1 = r * v1
                 v2 = r * v2
                 v3 = r * v3
@@ -105,17 +105,18 @@ class VM_Process1_노이즈시뮬레이터:
                 k1 = 1 * k1
                 k2 = 1 * k2
                 eta_k = np.array([[k1], [k2]])
-                A = 0.5 * A
+                A = 0.2 * A   #0.2
                 #A_chg = self.A
                 # C_p1 = np.transpose(np.array([[0, 0.5, 0.05, 0, 0.15, 0], [0.085, 0, 0.025, 0.2, 0, 0]]))
                 #C = np.transpose(np.array([[0.7, 0.8, 0.5, 0.2, 0.3, 0.2], [0.2, 0.5, 0.8, 0.4, 0.2, 0.2]]))
-                C = 0.2 * C
+                C = 0.2 * C    #0.2
                 #C_chg = np.transpose(np.array([[0, 0.25, 0.01, 0, 0.05, 0], [0.04, 0, 0.01, 0.1, 0, 0]]))
                 #C_chg = np.transpose(np.array([[0.7, 0.8, 0.5, 0.2, 0.3, 0.2], [0.085, 0, 0.025, 0.2, 0, 0]]))
                 #d = np.array([[0.14, 0], [0.07, 0]])
                 #d_chg = self.d
-                # e1 = np.random.normal(3, np.sqrt(0.1))
-                # e2 = np.random.normal(3, np.sqrt(0.2))
+                d = 1 * d
+                # e1 = np.random.normal(1, np.sqrt(0.1))
+                # e2 = np.random.normal(1, np.sqrt(0.1))
                 # e = np.array([e1, e2])
 
         y = u.dot(A) + v.dot(C) + np.sum(eta_k * d, axis=0) + e
