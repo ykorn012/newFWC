@@ -17,13 +17,14 @@ from sklearn import metrics
 class VM_Process2_시뮬레이터:
     metric = 0
 
-    def __init__(self, A, d, C, F, p_VM, p_ACT, seed):
+    def __init__(self, A, d, C, F, p_lambda, p_VM, p_ACT, seed):
         self.pls = PLSRegression(n_components=6, scale=False, max_iter=50000, copy=True)
         np.random.seed(seed)
         self.A = A
         self.d = d
         self.C = C
         self.F = F
+        self.p_lambda = p_lambda
         self.p_VM = p_VM
         self.p_ACT = p_ACT
         self.real_ACT = []  # Process-1을 반영하는 실제 Actual 값
@@ -31,8 +32,8 @@ class VM_Process2_시뮬레이터:
     def sampling_up(self):
         # u1 = np.random.normal(0.4, np.sqrt(0.2))
         # u2 = np.random.normal(0.6, np.sqrt(0.2))
-        u1 = np.random.normal(0.1, np.sqrt(0.1))
-        u2 = np.random.normal(0.2, np.sqrt(0.1))
+        u1 = np.random.normal(0.2, np.sqrt(0.1))
+        u2 = np.random.normal(0.1, np.sqrt(0.05))
         u = np.array([u1, u2])
         return u
 
@@ -80,8 +81,13 @@ class VM_Process2_시뮬레이터:
 
         if fp is not None:   # Process-1의 입력값이 있다면
             # 이건 왜 해놓은지 모르겠다.. R2R에서 결과를 도출하기 위해서인지, y를 Paremeter로 학습목적인지.. 추후 검증필요
-            psi = np.r_[psi, fp]
-            f = fp
+            if k % 10 == 0:
+                f = p_ACT
+            else:
+                f = p_VM
+            if isInit == True:
+                f = p_ACT
+            psi = np.r_[psi, f]
             # VM이든 DoE든 계산한다.
             y = u.dot(self.A) + v.dot(self.C) + np.sum(eta_k * self.d, axis=0) + f.dot(self.F) + e
             if isInit == False: #VM이 아닌 실제 ACT값을 별도로 계산한다.
@@ -130,9 +136,15 @@ class VM_Process2_시뮬레이터:
 
         plsWindow = []
 
+        # Process-1의 lamda_PLS는 이미 반영되어서 넘어오기 때문에, 중복되어 lamda_PLS를 반영할 필요가 없다.
         for z in np.arange(0, Z):
-            npPlsWindow[z * M:(z + 1) * M - 1, 0:idx_start] = lamda_PLS * npPlsWindow[z * M:(z + 1) * M - 1, 0:idx_start]
-            npPlsWindow[z * M:(z + 1) * M - 1, idx_start:idx_end] = lamda_PLS * (npPlsWindow[z * M:(z + 1) * M - 1, idx_start:idx_end])
+            if f is not None:
+                npPlsWindow[z * M:(z + 1) * M - 1, 0:idx_start - 2] = lamda_PLS * npPlsWindow[z * M:(z + 1) * M - 1, 0:idx_start - 2]
+                npPlsWindow[z * M:(z + 1) * M - 1, idx_start - 2:idx_start] = self.p_lambda * npPlsWindow[z * M:(z + 1) * M - 1, idx_start - 2:idx_start]
+                npPlsWindow[z * M:(z + 1) * M - 1, idx_start:idx_end] = lamda_PLS * (npPlsWindow[z * M:(z + 1) * M - 1, idx_start:idx_end])
+            else:
+                npPlsWindow[z * M:(z + 1) * M - 1, 0:idx_start] = lamda_PLS * npPlsWindow[z * M:(z + 1) * M - 1, 0:idx_start]
+                npPlsWindow[z * M:(z + 1) * M - 1, idx_start:idx_end] = lamda_PLS * (npPlsWindow[z * M:(z + 1) * M - 1, idx_start:idx_end])
 
         for i in range(len(npPlsWindow)):
             plsWindow.append(npPlsWindow[i])
@@ -210,13 +222,26 @@ class VM_Process2_시뮬레이터:
             #         temp = npM_Queue[i:i + 1, idx_end:idx_end + 2]
             #     VM_Output.append(np.array([temp[0, 0], temp[0, 1]]))
 
-            npVM_Queue[0:M - 1, 0:idx_start] = lamda_PLS * npVM_Queue[0:M - 1, 0:idx_start]
-            npVM_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * (npVM_Queue[0:M - 1, idx_end:idx_end + 2] + 0.5 * ez) # + 0.5 * ez
-            npVM_Queue = npVM_Queue[:, 0:idx_end]
+            # Process-1의 lamda_PLS는 이미 반영되어서 넘어오기 때문에, 중복되어 lamda_PLS를 반영할 필요가 없다.
+            if  self.p_VM[z-1] is not None:
+                npVM_Queue[0:M - 1, 0:idx_start - 2] = lamda_PLS * npVM_Queue[0:M - 1, 0:idx_start - 2]
+                npVM_Queue[0:M - 1, idx_start - 2:idx_start] = self.p_lambda * npVM_Queue[0:M - 1, idx_start - 2:idx_start]
+                npVM_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * (npVM_Queue[0:M - 1, idx_end:idx_end + 2] + 0.5 * ez) # + 0.5 * ez
+                npVM_Queue = npVM_Queue[:, 0:idx_end]
 
-            npACT_Queue[0:M - 1, 0:idx_start] = lamda_PLS * npACT_Queue[0:M - 1, 0:idx_start]
-            npACT_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * npACT_Queue[0:M - 1, idx_start:idx_end]
-            npACT_Queue = npACT_Queue[:, 0:idx_end]  ##idx_start ~ end 까지 VM 값 정리
+                npACT_Queue[0:M - 1, 0:idx_start - 2] = lamda_PLS * npACT_Queue[0:M - 1, 0:idx_start - 2]
+                npACT_Queue[0:M - 1, idx_start - 2:idx_start] = lamda_PLS * npACT_Queue[0:M - 1, idx_start - 2:idx_start]
+                npACT_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * npACT_Queue[0:M - 1, idx_start:idx_end]
+                npACT_Queue = npACT_Queue[:, 0:idx_end]  ##idx_start ~ end 까지 VM 값 정리
+            else:
+                npVM_Queue[0:M - 1, 0:idx_start] = lamda_PLS * npVM_Queue[0:M - 1, 0:idx_start]
+                npVM_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * (
+                npVM_Queue[0:M - 1, idx_end:idx_end + 2] + 0.5 * ez)  # + 0.5 * ez
+                npVM_Queue = npVM_Queue[:, 0:idx_end]
+
+                npACT_Queue[0:M - 1, 0:idx_start] = lamda_PLS * npACT_Queue[0:M - 1, 0:idx_start]
+                npACT_Queue[0:M - 1, idx_start:idx_end] = lamda_PLS * npACT_Queue[0:M - 1, idx_start:idx_end]
+                npACT_Queue = npACT_Queue[:, 0:idx_end]  ##idx_start ~ end 까지 VM 값 정리
 
             for i in range(M):  #VM_Output 구한다. lamda_pls 가중치를 반영하여 다음 계산시 편리하게 한다.
                 if i == M - 1:
