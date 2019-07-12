@@ -30,7 +30,7 @@ Z_VM = 65
 Nz_RUN = 15
 v_PLS = 1
 dM = 5
-dStart = 16  #25 * 10 + 30 * 5
+dStart = 15  #25 * 10 + 30 * 5
 # 15 * 10 + 5 * 50
 # Process 변수와 출력 관련 system gain matrix
 
