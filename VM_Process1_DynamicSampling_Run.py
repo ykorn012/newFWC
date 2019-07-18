@@ -27,10 +27,9 @@ dM = 5
 S2 = 30
 RUNS_CNT = S1 + S2
 N = M * S1 + dM * S2
-dStart = 26  #25 * 10 + 30 * 5
+dStart = S1 + 1  #25 * 10 + 30 * 5
 Z_DoE = 12
-Nz_RUN = 15
-v_PLS = 0.8
+v_PLS = 0.6
 
 # Process 변수와 출력 관련 system gain matrix
 
@@ -47,26 +46,22 @@ def main():
     np.savetxt("output/y_prd.csv", y_prd, delimiter=",", fmt="%.4f")
 
     fdh_graph.plt_show1(N, y_act[:, 0:1], y_prd[:, 0:1])
-    fdh_graph.plt_show2(RUNS_CNT, ez_run[:, 0:1], ez_run[:, 1:2])
+    fdh_graph.plt_show2(RUNS_CNT, ez_run[:, 0:1], ez_run[:, 1:2], Noise=False)
 
     ez_run_out = []
     runM = M
 
+    ez_run_out.append(np.array([0, 0]))
     for z in np.arange(1, RUNS_CNT + 1):
         if z == dStart:
             runM = dM
         for k in np.arange(z * runM, (z + 1) * runM):
             ez_run_out.append(ez_run[z])
+    #ez_run_out[0] = np.array([0, 0])
     ez_run_out = np.array(ez_run_out)
+
     np.savetxt("output/ez_run2.csv", ez_run_out, delimiter=",", fmt="%.4f")
-
-    # plt.figure()
-    # plt.plot(np.arange(N), ez_run_out[:, 0:1], 'bx-', ez_run_out[:, 1:2], 'gx--', lw=2, ms=5, mew=2)
-    # plt.xticks(np.arange(0, N, 50))
-    # plt.yticks(np.arange(-1.2, 1.3, 0.2))
-    # plt.xlabel('Metrology Run No.(z)')
-    # plt.ylabel('e(z)')
-
+    fdh_graph.plt_show5(ez_run_out, N, M, dM, S1, Noise=False)
 
 if __name__ == "__main__":
     main()
