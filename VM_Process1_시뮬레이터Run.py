@@ -16,18 +16,18 @@ from simulator.FDC_Graph import FDC_Graph
 # import pandas as pd
 import os
 
-os.chdir("D:/10. 대학원/04. Source/OnlyVM/03. Local VM/")
+os.chdir("D:/10. 대학원/04. Source/OnlyVM/10. DynamicSampling/")
 
 A_p1 = np.array([[0.5, -0.2], [0.25, 0.15]])    #recipe gain matrix
 d_p1 = np.array([[0.1, 0], [0.05, 0]])  #drift matrix
 C_p1 = np.transpose(np.array([[0, 0.5, 0.05, 0, 0.15, 0], [0.085, 0, 0.025, 0.2, 0, 0]])) # FDC variable matrix
-SEED = 1000000000
+SEED = 1
 
 M = 10
 Z_DoE = 12
 Z_VM = 40
 Nz_RUN = 15
-v_PLS = 0.5
+v_PLS = 1
 
 # Process 변수와 출력 관련 system gain matrix
 
@@ -39,6 +39,8 @@ def main():
 
     fdh_graph.plt_show1(Z_VM * M, y_act[:, 0:1], y_prd[:, 0:1])
     fdh_graph.plt_show2(Z_VM, ez_run[:, 0:1], ez_run[:, 1:2])
+
+    np.savetxt("output/ez_run.csv", ez_run, delimiter=",", fmt="%.4f")
 
     p1_q1_mape_Queue = []
 
