@@ -216,7 +216,7 @@ class VM_Process1_DynamicSampling_노이즈시뮬레이터:
         DYNAMIC = False
         end = 0
         for z in np.arange(0, Z):
-            if z >= self.dStart:
+            if z + 1 >= self.dStart:
                 DYNAMIC = True
                 M = self.dM
                 start = end
