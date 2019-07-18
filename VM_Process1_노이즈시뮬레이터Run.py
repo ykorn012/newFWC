@@ -37,7 +37,7 @@ def main():
     VM_Output, ACT_Output, ez_run, y_act, y_prd = fwc_p1_vm.VM_Run(lamda_PLS=v_PLS, Z=Z_VM, M=M)
 
     fdh_graph.plt_show1(Z_VM * M, y_act[:, 0:1], y_prd[:, 0:1])
-    fdh_graph.plt_show2(Z_VM, ez_run[:, 0:1], ez_run[:, 1:2])
+    fdh_graph.plt_show2(Z_VM, ez_run[:, 0:1], ez_run[:, 1:2], Noise=True)
 
     #np.savetxt("output/p1_ez_run.csv", ez_run, delimiter=",", fmt="%.4f")
     # for z in np.arange(22, 34, 1):
