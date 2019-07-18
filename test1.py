@@ -18,18 +18,19 @@ Z_DoE = 12
 Nz_RUN = 15
 v_PLS = 0.8
 
-os.chdir("D:/10. 대학원/04. Source/OnlyVM/10. DynamicSampling/")
+os.chdir("D:/03. Paper/09. newSource/10. DynamicSampling/")
+
 ez_run_out = np.loadtxt('output/ez_run2.csv', delimiter=',')
 df = pd.read_csv('output/ez_run2.csv', sep=',', header=None, names=['q1', 'q2'])
 
 label = []
-for i in np.arange(10, N + dM , 1):
+for i in np.arange(0, N + 1, 1):
     if i <= S1 * M:
         label.append(0)
     else:
         label.append(1)
 df['label'] = pd.Series(label)
-df.loc[261]['label']
+#df.loc[251]['label']
 
 xdata = []
 y1data = []
@@ -38,13 +39,7 @@ ldata = []
 
 plt.figure()
 
-axes = plt.gca()
-# axes.set_xlim(0, N)
-# axes.set_ylim(-1.2, 1.2)
-line1, = axes.plot(xdata, y1data, 'bx-', lw=2, ms=5, mew=2)
-line2, = axes.plot(xdata, y2data, 'gx--', lw=2, ms=5, mew=2)
-
-for i in np.arange(0, N + dM , 1):
+for i in np.arange(0, N + 1, 1):
     if i <= S1 * M and i % M == 0:
         xdata.append(i)
         y1data.append(df.loc[i]['q1'])
@@ -78,7 +73,7 @@ df2.columns = ['no', 'q1', 'q2', 'label']
 num_classes = 2
 #cmap = ListedColormap(['r', 'g', 'b', 'y'])
 cmap = ListedColormap(['b', 'r'])
-norm = BoundaryNorm(range(num_classes+1), cmap.N)
+norm = BoundaryNorm(range(num_classes + 1), cmap.N)
 points = np.array([df2['no'], df2['q1']]).T.reshape(-1, 1, 2)
 segments = np.concatenate([points[:-1], points[1:]], axis=1)
 lc = LineCollection(segments, cmap=cmap, norm=norm)
@@ -92,14 +87,20 @@ plt.gca().add_collection(lc)
 plt.xlabel('Metrology Run No.(z)')
 plt.ylabel('e(z)')
 #plt.xticks(np.arange(0, 410, 50))
-ticks = np.arange(0, 400, 50)
+ticks = np.arange(0, N + 1, 50)
 plt.xticks(ticks)
 plt.yticks(np.arange(-1.2, 1.3, 0.2))
+
 
 dic = {50 : "50 \n (5 runs)", 100: "100 \n (10 runs)", 150: "150 \n (15 runs)", 200: "200 \n (20 runs)",
        250: "250 \n (25 runs)", 300: "300 \n (35 runs)", 350: "350 \n (45 runs)", 400: "400 \n (55 runs)"}
 labels = [ticks[i] if t not in dic.keys() else dic[t] for i,t in enumerate(ticks)]
-axes.get_xticklabels()
+
+axes = plt.gca()
+# axes.set_xlim(0, N)
+# axes.set_ylim(-1.2, 1.2)
+#line1, = axes.plot(xdata, y1data, 'bx-', lw=2, ms=5, mew=2)
+#line2, = axes.plot(xdata, y2data, 'gx--', lw=2, ms=5, mew=2)
 
 i = 0
 for text in axes.get_xticklabels():
@@ -110,6 +111,10 @@ for text in axes.get_xticklabels():
 #ax = fig1.add_subplot(111)
 axes.set_xticklabels(labels)
 #axes.set_color_cycle(colors)
+plt.rcParams['lines.linewidth'] = 2
+plt.rcParams['lines.markersize'] = 5
+plt.rcParams['lines.markeredgewidth'] = 2
+plt.rcParams['lines.linestyle'] = '--'
 plt.tight_layout()
 
 plt.show()
