@@ -170,7 +170,7 @@ class VM_Process1_DynamicSampling_시뮬레이터:
         DYNAMIC = False
         end = 0
         for z in np.arange(0, Z):
-            if z  >= self.dStart:
+            if z + 1 >= self.dStart:
                 DYNAMIC = True
                 M = self.dM
                 start = end
@@ -201,8 +201,9 @@ class VM_Process1_DynamicSampling_시뮬레이터:
             # else:
             #     del plsWindow[0:pre_M]
 
-            # if DYNAMIC and (z == self.dStart):
-            #     delCount = self.dM * self.QueueZ
+            # 정상일 때이므로 생략했다.
+            # if z + 1 == self.dStart:
+            #     delCount = self.dM * self.QueueZ - self.dM
             #     delSize = self.QueueSize - delCount
             #     del plsWindow[0:delSize]
 
