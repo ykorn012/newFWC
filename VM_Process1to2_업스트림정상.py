@@ -17,7 +17,7 @@ from simulator.FDC_Graph import FDC_Graph
 # import pandas as pd
 import os
 
-os.chdir("D:/10. 대학원/04. Source/OnlyVM/03. Local VM/")
+os.chdir("D:/10. 대학원/04. Source/09. VM_Source/03. VMOnly/")
 
 A_p1 = np.array([[0.5, -0.2], [0.25, 0.15]])    #recipe gain matrix
 d_p1 = np.array([[0.1, 0], [0.05, 0]])  #drift matrix
@@ -27,18 +27,20 @@ C_p1 = np.transpose(np.array([[0, 0.5, 0.05, 0, 0.15, 0], [0.085, 0, 0.025, 0.2,
 A_p2 = np.array([[1, 0.1], [-0.5, 0.2]])
 d_p2 = np.array([[0, 0.05], [0, 0.05]])
 C_p2 = np.transpose(np.array([[0.1, 0, 0, -0.2, 0.1], [0, -0.2, 0, 0.3, 0]]))
-F_p2 = np.array([[0.5, 0], [0, 0.5]])
-SEED = 1000000000 #5  17
+F_p2 = np.array([[2, 0], [0, 2]])
+
+SEED1 = 20000  #100000020 900000020 100000000 700000000 기존 1개일 때
+SEED2 = 1033   #739
 
 M = 10
 Z_DoE = 12
 Z_VM = 40
-v1_PLS = 0.4
+v1_PLS = 0.6
 v2_PLS = 0.6
 
 def main():
     fdh_graph = FDC_Graph()
-    fwc_p1_vm = VM_Process1_시뮬레이터(A_p1, d_p1, C_p1, SEED)
+    fwc_p1_vm = VM_Process1_시뮬레이터(A_p1, d_p1, C_p1, SEED1)
     fwc_p1_vm.DoE_Run(lamda_PLS=v1_PLS, Z=Z_DoE, M=M)  # DoE Run
 
     # p1_VM_Output : lambda_pls 반영 10 runs act결과 반영 vm
@@ -73,7 +75,7 @@ def main():
     np.savetxt("output/p1_y_act.csv", p1_y_act, delimiter=",", fmt="%.4f")
     np.savetxt("output/p1_ACT_Output.csv", p1_ACT_Output, delimiter=",", fmt="%.4f")
 
-    fwc_p2_act = VM_Process2_시뮬레이터(A_p2, d_p2, C_p2, F_p2, v1_PLS, p1_y_prd, p1_y_act, SEED)
+    fwc_p2_act = VM_Process2_시뮬레이터(A_p2, d_p2, C_p2, F_p2, v1_PLS, p1_y_prd, p1_y_act, SEED2)
     fwc_p2_act.DoE_Run(lamda_PLS=v2_PLS, Z=Z_DoE, M=M, f=p1_y_act)  #DoE Run ACT값으로 가능
     p2_VM_Output, p2_ACT_Output, p2_ez_run, p2_y_act, p2_y_prd = fwc_p2_act.VM_Run(lamda_PLS=v2_PLS, Z=Z_VM, M=M)
 
